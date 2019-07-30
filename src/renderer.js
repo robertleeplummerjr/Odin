@@ -7,6 +7,7 @@ class Renderer
 {
   constructor() 
   {
+    this.uniforms = {};
     this.startTime = Date.now();
     this.walker = new Walker();
 
@@ -16,8 +17,8 @@ class Renderer
     // TEX DIMENSION SET AUTOMATICALLY
     this.texDimension = Math.sqrt(this.numAgents * 16);
 
-    this.agentPos = [];
-    this.agentFwd = [];
+    this.agentPos = null;
+    this.agentFwd = null;
 
     // RANDOMNESS OF AGENTS TO MAKE SCENE INTERESTING
     this.agentOff = new Array(this.numAgents);
@@ -72,7 +73,11 @@ class Renderer
         v_position: gl.getAttribLocation(this.tex_shader_program, 'v_position'),
 
         agentPositions: gl.getUniformLocation(this.tex_shader_program, 'agentPositions'),
+        agentPositionsSize: gl.getUniformLocation(this.tex_shader_program, 'agentPositionsSize'),
+        agentPositionsDim: gl.getUniformLocation(this.tex_shader_program, 'agentPositionsDim'),
         agentForwards: gl.getUniformLocation(this.tex_shader_program, 'agentForwards'),
+        agentForwardsSize: gl.getUniformLocation(this.tex_shader_program, 'agentForwardsSize'),
+        agentForwardsDim: gl.getUniformLocation(this.tex_shader_program, 'agentForwardsDim'),
 
         time: gl.getUniformLocation(this.tex_shader_program, 'time'),
         texDim: gl.getUniformLocation(this.tex_shader_program, 'texDim'),
@@ -119,6 +124,9 @@ class Renderer
     // this.projectionMatrix = mat4.create();
     // this.VP = mat4.create();
     // this.canvas_dimensions = vec2.create();
+
+    gl.viewport(0, 0, canvas.clientWidth, canvas.clientHeight);
+    gl.enable(gl.SCISSOR_TEST);
   }
 
 
@@ -168,8 +176,8 @@ class Renderer
     ////////////////////////////////////////////////////////////////////////////
     // FOR RENDERING TO TEXTURE
     ////////////////////////////////////////////////////////////////////////////
-
-    gl.viewport(0, 0, this.texDimension, this.texDimension);
+    gl.scissor(0, 0, this.texDimension, this.texDimension);
+    // gl.viewport(0, 0, this.texDimension, this.texDimension);
 
     // for more info on gl framebuffer texture functions:
     // http://math.hws.edu/graphicsbook/c7/s4.html
@@ -238,19 +246,29 @@ class Renderer
     }
     gl.uniform3fv(this.tex_uniforms.agentForwards, agentFwd);
     */
+    this.setUniform2iv(this.tex_uniforms.agentPositionsSize, this.agentPos.size);
+    this.setUniform3iv(this.tex_uniforms.agentPositionsDim, this.agentPos.dimensions);
+    gl.activeTexture(gl.TEXTURE0 + 1);
+    gl.bindTexture(gl.TEXTURE_2D, this.agentPos.texture);
+    this.setUniform1i(this.tex_uniforms.agentPositions, 1);
+    // gl.uniform3fv(this.tex_uniforms.agentPositions, this.agentPos);
 
-    gl.uniform3fv(this.tex_uniforms.agentPositions, this.agentPos);
-    gl.uniform3fv(this.tex_uniforms.agentForwards, this.agentFwd);
+    this.setUniform2iv(this.tex_uniforms.agentForwardsSize, this.agentFwd.size);
+    this.setUniform3iv(this.tex_uniforms.agentForwardsDim, this.agentFwd.dimensions);
+    gl.activeTexture(gl.TEXTURE0 + 2);
+    gl.bindTexture(gl.TEXTURE_2D, this.agentFwd.texture);
+    this.setUniform1i(this.tex_uniforms.agentForwards, 2);
+    // gl.uniform3fv(this.tex_uniforms.agentForwards, this.agentFwd);
 
-    gl.uniform1fv(this.tex_uniforms.agentTimeOffset, this.agentOff);
-    gl.uniform1fv(this.tex_uniforms.agentGender, this.agentGen);
-    gl.uniform1fv(this.tex_uniforms.agentNervous, this.agentNer);
-    gl.uniform1fv(this.tex_uniforms.agentWeight, this.agentWei);
-    gl.uniform1fv(this.tex_uniforms.agentHappy, this.agentHap);
+    this.setUniform1fv(this.tex_uniforms.agentTimeOffset, this.agentOff);
+    this.setUniform1fv(this.tex_uniforms.agentGender, this.agentGen);
+    this.setUniform1fv(this.tex_uniforms.agentNervous, this.agentNer);
+    this.setUniform1fv(this.tex_uniforms.agentWeight, this.agentWei);
+    this.setUniform1fv(this.tex_uniforms.agentHappy, this.agentHap);
 
-    gl.uniform1f(this.tex_uniforms.time, (Date.now() - this.startTime) * .001);
-    gl.uniform1i(this.tex_uniforms.texDim, this.texDimension);
-    gl.uniform1f(this.tex_uniforms.worldDim, this.worldDimension);
+    this.setUniform1f(this.tex_uniforms.time, (Date.now() - this.startTime) * .001);
+    this.setUniform1i(this.tex_uniforms.texDim, this.texDimension);
+    this.setUniform1f(this.tex_uniforms.worldDim, this.worldDimension);
     
     ////////////////////////////////////////////////////////////////////////////
 
@@ -263,8 +281,9 @@ class Renderer
     ////////////////////////////////////////////////////////////////////////////
 
     // fixes resizing window
-    gl.viewport(0, 0, canvas.clientWidth, canvas.clientHeight);
-
+    gl.scissor(0, 0, canvas.clientWidth, canvas.clientHeight);
+    // gl.viewport(0, 0, canvas.clientWidth, canvas.clientHeight);
+    
     // Now draw the main scene, which is 3D, using the texture.
     gl.bindTexture(gl.TEXTURE_2D, null);
     gl.bindFramebuffer(gl.FRAMEBUFFER, null); // Draw to default framebuffer.
@@ -276,7 +295,7 @@ class Renderer
 
     // useMe()
     gl.useProgram(this.crowd_shader_program);
-
+    
     // vbo
     var quad_vertex_buffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, quad_vertex_buffer);
@@ -292,25 +311,25 @@ class Renderer
     //gl.uniformMatrix4fv(this.crowd_uniforms.u_viewProj, false, this.VP);
 
     // for sdf walking
-    gl.uniform2f(this.crowd_uniforms.resolution, canvas.clientWidth, canvas.clientHeight);
-    gl.uniform1f(this.crowd_uniforms.time, (Date.now() - this.startTime) * .001);
-    gl.uniform1f(this.crowd_uniforms.fov, camera.fov * Math.PI / 180);
-    gl.uniform1f(this.crowd_uniforms.raymarchMaximumDistance, this.worldDimension);
-    gl.uniform1f(this.crowd_uniforms.raymarchPrecision, 0.01);
-    gl.uniform3f(this.crowd_uniforms.camera, camera.position.x, camera.position.y, camera.position.z);
-    gl.uniform3f(this.crowd_uniforms.target, 0, 10, 0);
+    this.setUniform2f(this.crowd_uniforms.resolution, canvas.clientWidth, canvas.clientHeight);
+    this.setUniform1f(this.crowd_uniforms.time, (Date.now() - this.startTime) * .001);
+    this.setUniform1f(this.crowd_uniforms.fov, camera.fov * Math.PI / 180);
+    this.setUniform1f(this.crowd_uniforms.raymarchMaximumDistance, this.worldDimension);
+    this.setUniform1f(this.crowd_uniforms.raymarchPrecision, 0.01);
+    this.setUniform3f(this.crowd_uniforms.camera, camera.position.x, camera.position.y, camera.position.z);
+    this.setUniform3f(this.crowd_uniforms.target, 0, 10, 0);
 
     // NOTE gl.uniform3fv takes in ARRAY OF FLOATS, NOT ARRAY OF VEC3S
     // [vec3(1, 2, 3), vec3(4, 5, 6)] must be converted to [1, 2, 3, 4, 5, 6]
     //gl.uniform3fv(this.crowd_uniforms.joints, this.walker.update());
 
-    gl.uniform1i(this.crowd_uniforms.texDim, this.texDimension);
-    gl.uniform1f(this.crowd_uniforms.worldDim, this.worldDimension);
-    gl.uniform1fv(this.crowd_uniforms.agentRadius, this.agentRad);
+    this.setUniform1i(this.crowd_uniforms.texDim, this.texDimension);
+    this.setUniform1f(this.crowd_uniforms.worldDim, this.worldDimension);
+    this.setUniform1fv(this.crowd_uniforms.agentRadius, this.agentRad);
 
     // PASS TEXTURE OF AGENT POSITIONS FROM FRAME BUFFER    
     // passing agent data texture to crowd shader
-    gl.uniform1i(this.crowd_uniforms.u_image, 0);
+    this.setUniform1i(this.crowd_uniforms.u_image, 0);
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, agent_tex);
 
@@ -322,6 +341,82 @@ class Renderer
     // after draw
     gl.bindBuffer(gl.ARRAY_BUFFER, null);
     gl.bindVertexArray(null);        
+  }
+
+  setUniform1i(loc, value) {
+    if (this.uniforms[loc] !== value) {
+      gl.uniform1i(loc, value);
+      this.uniforms[loc] = value;
+    }
+  }
+  setUniform1f(loc, value) {
+    if (this.uniforms[loc] !== value) {
+      gl.uniform1f(loc, value);
+      this.uniforms[loc] = value;
+    }
+  }
+  setUniform1fv(loc, value) {
+    if (this.uniforms[loc] !== value) {
+      gl.uniform1fv(loc, value);
+      this.uniforms[loc] = value;
+    }
+  }
+  setUniform2i(loc, value) {
+    const uniform = this.uniforms[loc] || [];
+    if (uniform[0] !== value1 || uniform[1] !== value2) {
+      gl.uniform2i(loc, value1, value2);
+      this.uniforms[loc] = [value1, value2];
+    }
+  }
+  setUniform2f(loc, value1, value2) {
+    const uniform = this.uniforms[loc] || [];
+    if (uniform[0] !== value1 || uniform[1] !== value2) {
+      gl.uniform2f(loc, value1, value2);
+      this.uniforms[loc] = [value1, value2];
+    }
+  }
+  setUniform2fv(loc, value) {
+    const uniform = this.uniforms[loc] || [];
+    if (uniform[0] !== value[0] || uniform[1] !== value[1]) {
+      gl.uniform2fv(loc, value);
+      this.uniforms[loc] = value;
+    }
+  }
+  setUniform2iv(loc, value) {
+    const uniform = this.uniforms[loc] || [];
+    if (uniform[0] !== value[0] || uniform[1] !== value[1]) {
+      gl.uniform2iv(loc, value);
+      this.uniforms[loc] = value;
+    }
+  }
+  setUniform3i(loc, value) {
+    const uniform = this.uniforms[loc] || [];
+    if (uniform[0] !== value1 || uniform[1] !== value2 || uniform[2] !== value3) {
+      gl.uniform3i(loc, value);
+      this.uniforms[loc] = value;
+      this.uniforms[loc] = [value1, value2, value3];
+    }
+  }
+  setUniform3f(loc, value1, value2, value3) {
+    const uniform = this.uniforms[loc] || [];
+    if (uniform[0] !== value1 || uniform[1] !== value2 || uniform[2] !== value3) {
+      gl.uniform3f(loc, value1, value2, value3);
+      this.uniforms[loc] = [value1, value2, value3];
+    }
+  }
+  setUniform3fv(loc, value) {
+    const uniform = this.uniforms[loc] || [];
+    if (uniform[0] !== value[0] || uniform[1] !== value[1] || uniform[2] !== value[2]) {
+      gl.uniform3fv(loc, value);
+      this.uniforms[loc] = value;
+    }
+  }
+  setUniform3iv(loc, value) {
+    const uniform = this.uniforms[loc] || [];
+    if (uniform[0] !== value[0] || uniform[1] !== value[1] || uniform[2] !== value[2]) {
+      gl.uniform3iv(loc, value);
+      this.uniforms[loc] = value;
+    }
   }
 }
 

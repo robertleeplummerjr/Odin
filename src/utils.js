@@ -40,6 +40,7 @@ function loadShader(gl_context, src, type) {
 
   if (!gl_context.getShaderParameter(shader, gl_context.COMPILE_STATUS)) {
     console.log('Cannot compile shaders:' + gl_context.getShaderInfoLog(shader));
+    console.log(src);
     gl_context.deleteShader(shader);
     return null;
   }
