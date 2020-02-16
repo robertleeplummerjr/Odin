@@ -11,10 +11,9 @@
   },
   "dependencies": {
     "dat.gui": "^0.7.6",
-    "diff": "^4.0.1",
     "gl-matrix": "^2.4.0",
-    "gpu.js": "^2.0.0-rc.24",
-    "spectorjs": "^0.9.7",
+    "gpu.js": "^2.3.0",
+    "spectorjs": "^0.9.11",
     "stats-js": "^1.0.1",
     "three": "^0.87.1",
     "three-js": "^79.0.0",

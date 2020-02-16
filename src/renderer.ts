@@ -1,39 +1,34 @@
 import { camera, cameraControls, gui, gl, canvas, resizeCanvas } from './init';
-import { mat4, vec4, vec3, vec2 } from 'gl-matrix';
-import { initShaderProgram, mat4FromArray } from './utils';
-import Walker from './walker.js'
+import { initShaderProgram } from './utils';
+import { Walker } from './walker.js'
 
-class Renderer 
-{
-  constructor() 
-  {
-    this.uniforms = {};
-    this.startTime = Date.now();
-    this.walker = new Walker();
+export class Renderer {
+  numAgents = 16 * Math.pow(4, 0); // must be 16 times a power of 4
+  uniforms = {};
+  startTime = Date.now();
+  walker = new Walker();
 
-    // SET THESE TWO VARIABLES
-    this.worldDimension = 500.0; // assumes world is square, centered at (0,0)
-    this.numAgents = 16 * Math.pow(4, 0); // must be 16 times a power of 4
-    // TEX DIMENSION SET AUTOMATICALLY
-    this.texDimension = Math.sqrt(this.numAgents * 16);
+  // SET THESE TWO VARIABLES
+  worldDimension = 500.0; // assumes world is square, centered at (0,0)
+  // TEX DIMENSION SET AUTOMATICALLY
+  texDimension = Math.sqrt(this.numAgents * 16);
 
-    this.agentPos = null;
-    this.agentFwd = null;
+  agentPos = null;
+  agentFwd = null;
 
-    // RANDOMNESS OF AGENTS TO MAKE SCENE INTERESTING
-    this.agentOff = new Array(this.numAgents);
-    this.agentGen = new Array(this.numAgents);
-    this.agentNer = new Array(this.numAgents);
-    this.agentWei = new Array(this.numAgents);
-    this.agentHap = new Array(this.numAgents);
-    this.agentRad = new Array(this.numAgents);
-    
+  // RANDOMNESS OF AGENTS TO MAKE SCENE INTERESTING
+  agentOff = new Array(this.numAgents);
+  agentGen = new Array(this.numAgents);
+  agentNer = new Array(this.numAgents);
+  agentWei = new Array(this.numAgents);
+  agentHap = new Array(this.numAgents);
+  agentRad = new Array(this.numAgents);
+
+  constructor() {  
     // initialize randomness of agents
-    for (var i = 0; i < this.numAgents; i++)
-    {
+    for (var i = 0; i < this.numAgents; i++) {
         try { throw i }
-        catch (agent)
-        {
+        catch (agent) {
             this.agentOff[i] = Math.random() * 360;
             this.agentGen[agent] = Math.random() * 5.0;
             this.agentNer[agent] = Math.random() * 5.0;
@@ -129,9 +124,7 @@ class Renderer
     gl.enable(gl.SCISSOR_TEST);
   }
 
-
-  update() 
-  {
+  update() {
     // updating values
     //mat4FromArray(this.viewMatrix, camera.modelViewMatrix.elements);
     //mat4FromArray(this.projectionMatrix, camera.projectionMatrix.elements);
@@ -147,8 +140,7 @@ class Renderer
   // positions is an array of vec3
   // forwards is an array of vec3
   // offsets is an array of floats (0 to 360)
-  updateAgents(positions, forwards)
-  {
+  updateAgents(positions, forwards) {
     this.agentPos = positions;
     this.agentFwd = forwards;
     /*
@@ -171,8 +163,7 @@ class Renderer
     */
   }
 
-  drawScene() 
-  {
+  drawScene() {
     ////////////////////////////////////////////////////////////////////////////
     // FOR RENDERING TO TEXTURE
     ////////////////////////////////////////////////////////////////////////////
@@ -182,7 +173,7 @@ class Renderer
     // for more info on gl framebuffer texture functions:
     // http://math.hws.edu/graphicsbook/c7/s4.html
 
-    var agent_tex = gl.createTexture();
+    const agent_tex = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, agent_tex);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
@@ -190,7 +181,7 @@ class Renderer
     //gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, this.texDimension, this.texDimension, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
 
-    var fbo = gl.createFramebuffer();
+    const fbo = gl.createFramebuffer();
     gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
     gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, agent_tex, 0);
 
@@ -208,7 +199,7 @@ class Renderer
     gl.clear( gl.DEPTH_BUFFER_BIT )
 
     // vbo
-    var tex_vertex_buffer = gl.createBuffer();
+    const tex_vertex_buffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, tex_vertex_buffer);
     gl.bufferData(gl.ARRAY_BUFFER, this.quad_vertex_buffer_data, gl.STATIC_DRAW);
     
@@ -361,7 +352,7 @@ class Renderer
       this.uniforms[loc] = value;
     }
   }
-  setUniform2i(loc, value) {
+  setUniform2i(loc, value1, value2) {
     const uniform = this.uniforms[loc] || [];
     if (uniform[0] !== value1 || uniform[1] !== value2) {
       gl.uniform2i(loc, value1, value2);
@@ -389,11 +380,10 @@ class Renderer
       this.uniforms[loc] = value;
     }
   }
-  setUniform3i(loc, value) {
+  setUniform3i(loc, value1, value2, value3) {
     const uniform = this.uniforms[loc] || [];
     if (uniform[0] !== value1 || uniform[1] !== value2 || uniform[2] !== value3) {
-      gl.uniform3i(loc, value);
-      this.uniforms[loc] = value;
+      gl.uniform3i(loc, value1, value2, value3);
       this.uniforms[loc] = [value1, value2, value3];
     }
   }
